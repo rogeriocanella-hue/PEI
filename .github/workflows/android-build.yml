@@ -1,0 +1,42 @@
+name: RC PEI Android - teste a partir do ZIP
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Obter codigo
+        uses: actions/checkout@v4
+      - name: Preparar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Preparar Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Instalar SDK Android 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Extrair pacote RC PEI
+        run: unzip -q rc-pei-android-configuracao-build-2026-11-10.zip -d android-build
+      - name: Testar regras e contratos
+        working-directory: android-build/rc-pei-android
+        run: bash tests/run-tests.sh
+      - name: Compilar APK de teste
+        working-directory: android-build/rc-pei-android
+        run: gradle --no-daemon :app:assembleDebug
+      - name: Salvar APK de teste
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc-pei-android-apk-teste
+          if-no-files-found: error
+          path: android-build/rc-pei-android/app/build/outputs/apk/debug/*.apk
